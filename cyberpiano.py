@@ -20,6 +20,9 @@ screen.fill(white)
 files = os.listdir(os.path.abspath("soundfonts/"))
 number_file = 0
 
+note = pygame.mixer.Sound("samples/Piano_C5.wav")
+ser = serial.Serial('/dev/ttyUSB0', 115200)
+
 font_name = pygame.font.match_font('calibri')
 def draw_text(surf, text, size, x, y):
     font = pygame.font.Font(font_name, size)
@@ -36,6 +39,12 @@ while done==False:
 			
     draw_text(screen, files[number_file], 28, 100, 100)
     pygame.display.flip()
+    
+    if(ser.in_waiting >0):
+        cmd, pitch, velocity = ser.read(), ser.read(), ser.read()
+        if (cmd[0]==144):
+            if (velocity[0]==127):
+                note.play()
 	
 	
 pygame.quit()
