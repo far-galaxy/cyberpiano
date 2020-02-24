@@ -12,11 +12,14 @@
 
 ## Инструкция по установке:
 
-1. Установить mingus:
+1. Установить pygame:
+`pip install pygame`
+
+2. Установить mingus:
 
 `pip install mingus`
 
-2. Установить fluidsynth:
+3. Установить fluidsynth:
 
 **Linux:**
 
