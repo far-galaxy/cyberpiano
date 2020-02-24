@@ -3,7 +3,7 @@ import serial
 import os, sys
 from cp_obj import *
 
-#from mingus.midi import fluidsynth 
+from mingus.midi import fluidsynth 
 
 pygame.init()
 size=[800,600]
@@ -26,8 +26,10 @@ selected_port = False
 
 if sys.platform.startswith('win'):
     ports = ['COM%s' % (i + 1) for i in range(1, 256)]
+    driver = "dsound"
 elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
     ports = glob.glob('/dev/tty[A-Za-z]*')
+    driver = "alsa"
     
     
 #'/dev/ttyUSB0'
@@ -85,7 +87,11 @@ while done==False:
             cur_sf2 = (cur_sf2-1) % len(files)
             
         if but_sf[1].overed(mouse):
-            cur_sf2 = (cur_sf2+1) % len(files)       
+            cur_sf2 = (cur_sf2+1) % len(files)   
+         
+        if but_sf[2].overed(mouse):   
+            fluidsynth.init('soundfonts/' + files[cur_sf2], driver)
+            but_sf[2].color = (0, 255, 0)
                 
                 
     m_cl = False
@@ -104,6 +110,10 @@ while done==False:
             if (cmd[0]==144):
                 if (velocity[0]==127):
                     last_note = pitch[0]
+                    fluidsynth.play_Note(pitch[0],0,100)
+                    
+                if (velocity[0]==127):
+                    fluidsynth.play_Note(pitch[0],0,0)
       
     draw_text(screen, "Note: "+str(last_note), 32, 500, 25)
                 

@@ -1,6 +1,6 @@
 import serial
 from mingus.midi import fluidsynth 
-fluidsynth.init('/home/pi/sf/piano.sf2',"alsa")
+fluidsynth.init('soundfonts/Piano.sf2',"alsa")
 
 
 filename = 'kick.wav'
