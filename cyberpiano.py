@@ -44,10 +44,19 @@ if sys.platform.startswith('win'):
             ports.append(port)
         except serial.serialutil.SerialException :
             pass        
-    #ports = ['COM%s' % (i + 1) for i in range(1, 256)]
     driver = "dsound"
+    
 elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-    ports = glob.glob('/dev/tty[A-Za-z]*')
+    for i in range(2, 256):
+        try:
+            port = '/dev/ttyUSB%s' % i
+            ser = serial.Serial(port)
+            ser.close()
+            ports.append(port)
+        except serial.serialutil.SerialException :
+            pass         
+    
+    #ports = glob.glob('/dev/tty[A-Za-z]*')
     driver = "alsa"
     
 print(ports)
