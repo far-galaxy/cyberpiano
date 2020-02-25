@@ -2,28 +2,35 @@ import pygame
 import serial
 import os, sys
 from cp_obj import *
-
 from mingus.midi import fluidsynth 
 
+#---------------------Caption-----------------------------
 pygame.init()
 size=[800,600]
 screen=pygame.display.set_mode(size)
 pygame.display.set_caption("CyberPiano")
-
-done=False
 clock=pygame.time.Clock()
 
-white = (255,255,255)
-black = (0,0,0)
 
-screen.fill((100,100,100))
+#---------------------Colors-----------------------------
+white = (255, 255, 255)
+black = (  0,   0,   0)
+bg =    (100, 100, 100)
+
 
 files = os.listdir(os.path.abspath("soundfonts/"))
 
+done=False
 cur_sf2 = 0
 cur_port = 0
+instrument = 0
 selected_port = False
+loaded_sf = False
+m_cl = False
+last_note = 0
 
+
+# Check system
 if sys.platform.startswith('win'):
     ports = ['COM%s' % (i + 1) for i in range(1, 256)]
     driver = "dsound"
@@ -32,30 +39,25 @@ elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
     driver = "alsa"
     
     
-#'/dev/ttyUSB0'
-#ser = serial.Serial(ports[0], 115200)
 
-font_name = pygame.font.match_font('calibri')
-def draw_text(surf, text, size, x, y):
-    font = pygame.font.Font(font_name, size)
-    text_surface = font.render(text, True, black)
-    text_rect = text_surface.get_rect()
-    text_rect.topleft = (x, y)
-    surf.blit(text_surface, text_rect)
-    
-    
+
+#--------------------------------Buttons-----------------------------------------    
 but_port = [Button(screen, 250, 25, 35, 35, white, "<", 32, black), 
             Button(screen, 300, 25, 35, 35, white, ">", 32, black),
-            Button(screen, 350, 25, 125, 35, white, "Connect", 32, black)]
+            Button(screen, 350, 25, 150, 35, white, "Connect", 32, black)]
 
-but_sf = [Button(screen, 450, 100, 35, 35, white, "<", 32, black), 
-            Button(screen, 500, 100, 35, 35, white, ">", 32, black),
-            Button(screen, 550, 100, 125, 35, white, "Load", 32, black)]
+but_sf = [Button(screen, 25, 210, 100, 100, white, "<", 72, black), 
+          Button(screen, 145, 210, 100, 100, white, ">", 72, black),
+          Button(screen, 25, 330, 220, 100, white, "Load", 48, black)]
+
+but_ins = [Button(screen, 275, 210, 100, 100, white, "<", 72, black), 
+          Button(screen, 395, 210, 100, 100, white, ">", 72, black)]
  
-m_cl = False
-last_note = 0
+
 while done==False:
-    screen.fill((100,100,100))
+    screen.fill(bg)
+    
+    
     # ---- Events start -----------
     for event in pygame.event.get(): # User did something
         if event.type == pygame.QUIT: # If user clicked close
@@ -63,7 +65,8 @@ while done==False:
         if event.type == pygame.MOUSEBUTTONDOWN: 
             m_cl=True
 	
-    draw_text(screen, "Port: "+ports[cur_port], 32, 25, 25)
+    
+    
     mouse = pygame.mouse.get_pos()
     
     if m_cl:
@@ -74,10 +77,11 @@ while done==False:
         if but_port[1].overed(mouse):
             cur_port += 1
             
-        if but_port[2].overed(mouse):  
+        if but_port[2].overed(mouse) and not selected_port:  
             try:
                 ser = serial.Serial(ports[cur_port], 115200)
                 but_port[2].color = (0, 255, 0)
+                but_port[2].text = "Connected"
                 selected_port = True
             except:
                 but_port[2].color = (255, 0, 0)
@@ -89,21 +93,41 @@ while done==False:
         if but_sf[1].overed(mouse):
             cur_sf2 = (cur_sf2+1) % len(files)   
          
-        if but_sf[2].overed(mouse):   
-            fluidsynth.init('soundfonts/' + files[cur_sf2], driver)
-            but_sf[2].color = (0, 255, 0)
-                
+        if but_sf[2].overed(mouse): 
+            if not loaded_sf:
+                print(fluidsynth.init('soundfonts/' + files[cur_sf2], driver), cur_sf2)
+                but_sf[2].color = (0, 255, 0)
+                but_sf[2].text = "Change"
+                loaded_sf = True
+            else:
+                #del fluidsynth
+                #from mingus.midi import fluidsynth 
+                print(fluidsynth.init('soundfonts/' + files[cur_sf2], driver), cur_sf2)
+         
+         #Instrument select   
+        if but_ins[0].overed(mouse):
+            instrument = (instrument-1) % 256
+            fluidsynth.set_instrument(0, instrument)
+             
+        if but_ins[1].overed(mouse):
+            instrument = (instrument+1) % 256 
+            fluidsynth.set_instrument(0, instrument)
                 
     m_cl = False
     
-    draw_text(screen, files[cur_sf2], 32, 25, 100)
+    # Drawning
+    draw_text(screen, "Preset:", 32, 25, 100)
+    draw_text(screen, files[cur_sf2][:-4], 32, 25, 150)
+    draw_text(screen, "Port: "+ports[cur_port], 32, 25, 25)
+    draw_text(screen, "Note: "+str(last_note), 32, 525, 100)
+    draw_text(screen, "Insrument: "+str(instrument), 32, 525, 150)
     
+    for i in but_port: i.draw()
+    for i in but_sf: i.draw()  
+    for i in but_ins: i.draw() 
+    pygame.display.flip()
     
-    for i in but_port:
-        i.draw()
-    for i in but_sf:
-        i.draw()    
-    
+    # Read piano
     if selected_port:
         if(ser.in_waiting >0):
             cmd, pitch, velocity = ser.read(), ser.read(), ser.read()
@@ -112,11 +136,11 @@ while done==False:
                     last_note = pitch[0]
                     fluidsynth.play_Note(pitch[0],0,100)
                     
-                if (velocity[0]==127):
+                if (velocity[0]==0):
                     fluidsynth.play_Note(pitch[0],0,0)
       
-    draw_text(screen, "Note: "+str(last_note), 32, 500, 25)
+    
                 
-    pygame.display.flip()
+    
 	
 pygame.quit()

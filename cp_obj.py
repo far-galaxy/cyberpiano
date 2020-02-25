@@ -29,3 +29,10 @@ class Button():
             return False
         
         
+font_name = pygame.font.match_font('calibri')
+def draw_text(surf, text, size, x, y):
+    font = pygame.font.Font(font_name, size)
+    text_surface = font.render(text, True, (0,0,0))
+    text_rect = text_surface.get_rect()
+    text_rect.topleft = (x, y)
+    surf.blit(text_surface, text_rect)
