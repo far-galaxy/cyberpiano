@@ -47,9 +47,9 @@ if sys.platform.startswith('win'):
     driver = "dsound"
     
 elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-    for i in range(2, 256):
+    for i in range(0, 64):
         try:
-            port = '/dev/ttyUSB%s' % i
+            port = '/dev/ttyUSB%d' % i
             ser = serial.Serial(port)
             ser.close()
             ports.append(port)
@@ -96,10 +96,10 @@ while done==False:
     if m_cl:
         # Port select
         if but_port[0].overed(mouse):
-            cur_port -= 1
+            cur_port = (cur_port-1) % len(ports)
             
         if but_port[1].overed(mouse):
-            cur_port += 1
+            cur_port = (cur_port+1) % len(ports)
             
         if but_port[2].overed(mouse) and not selected_port:  
             try:
@@ -143,7 +143,7 @@ while done==False:
     draw_text(screen, files[cur_sf2][:-4], 32, 25, 150)
     draw_text(screen, "Port: "+ports[cur_port], 32, 25, 25)
     draw_text(screen, "Note: "+str(last_note), 32, 525, 100)
-    draw_text(screen, "Insrument: "+str(instrument), 32, 525, 150)
+    draw_text(screen, "Instrument: "+str(instrument), 32, 525, 150)
     
     for i in but_port: i.draw()
     for i in but_sf: i.draw()  
