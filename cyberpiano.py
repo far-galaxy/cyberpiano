@@ -9,6 +9,8 @@ pygame.init()
 size=[800,600]
 screen=pygame.display.set_mode(size)
 pygame.display.set_caption("CyberPiano")
+programIcon = pygame.image.load('icon.png')
+pygame.display.set_icon(programIcon)
 clock=pygame.time.Clock()
 
 
@@ -19,6 +21,7 @@ bg =    (100, 100, 100)
 
 
 files = os.listdir(os.path.abspath("soundfonts/"))
+
 
 done=False
 cur_sf2 = 0
@@ -38,7 +41,9 @@ elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
     ports = glob.glob('/dev/tty[A-Za-z]*')
     driver = "alsa"
     
-    
+synth = fluidsynth.FluidSynthSequencer()
+synth.init()
+synth.start_audio_output(driver)
 
 
 #--------------------------------Buttons-----------------------------------------    
@@ -89,29 +94,28 @@ while done==False:
         #SF2 select
         if but_sf[0].overed(mouse):
             cur_sf2 = (cur_sf2-1) % len(files)
+            but_sf[2].color = white
             
         if but_sf[1].overed(mouse):
-            cur_sf2 = (cur_sf2+1) % len(files)   
+            cur_sf2 = (cur_sf2+1) % len(files)
+            but_sf[2].color = white
          
         if but_sf[2].overed(mouse): 
-            if not loaded_sf:
-                print(fluidsynth.init('soundfonts/' + files[cur_sf2], driver), cur_sf2)
-                but_sf[2].color = (0, 255, 0)
-                but_sf[2].text = "Change"
-                loaded_sf = True
-            else:
-                #del fluidsynth
-                #from mingus.midi import fluidsynth 
-                print(fluidsynth.init('soundfonts/' + files[cur_sf2], driver), cur_sf2)
+            synth.load_sound_font('soundfonts/' + files[cur_sf2])
+            but_sf[2].color = (0, 255, 0)
+            instrument = 0
+            synth.set_instrument(0, 0)
+            
+
          
          #Instrument select   
         if but_ins[0].overed(mouse):
             instrument = (instrument-1) % 256
-            fluidsynth.set_instrument(0, instrument)
+            synth.set_instrument(0, instrument)
              
         if but_ins[1].overed(mouse):
             instrument = (instrument+1) % 256 
-            fluidsynth.set_instrument(0, instrument)
+            synth.set_instrument(0, instrument)
                 
     m_cl = False
     
@@ -134,10 +138,10 @@ while done==False:
             if (cmd[0]==144):
                 if (velocity[0]==127):
                     last_note = pitch[0]
-                    fluidsynth.play_Note(pitch[0],0,100)
+                    synth.play_event(pitch[0],0,100)
                     
                 if (velocity[0]==0):
-                    fluidsynth.play_Note(pitch[0],0,0)
+                    synth.play_event(pitch[0],0,0)
       
     
                 
