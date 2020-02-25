@@ -31,16 +31,26 @@ selected_port = False
 loaded_sf = False
 m_cl = False
 last_note = 0
+ports = []
 
 
 # Check system
 if sys.platform.startswith('win'):
-    ports = ['COM%s' % (i + 1) for i in range(1, 256)]
+    for i in range(2, 256):
+        try:
+            port = 'COM%s' % i
+            ser = serial.Serial(port)
+            ser.close()
+            ports.append(port)
+        except serial.serialutil.SerialException :
+            pass        
+    #ports = ['COM%s' % (i + 1) for i in range(1, 256)]
     driver = "dsound"
 elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
     ports = glob.glob('/dev/tty[A-Za-z]*')
     driver = "alsa"
     
+print(ports)
 synth = fluidsynth.FluidSynthSequencer()
 synth.init()
 synth.start_audio_output(driver)
