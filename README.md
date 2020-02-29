@@ -26,15 +26,9 @@
 1. Установить PyQt5:
 `pip install pyqt5`
 
-2. Установить fluidsynth:
-
-**Linux:**
+2.Установить fluidsynth для Linux:
 
 `sudo apt-get install fluidsynth`
-
-**Windows:**
-
-Закинуть содержимое папки fluidsynth в папку, где установлен Python
 
 ##Запуск старой версии
 
@@ -47,7 +41,15 @@
 3. Установить pyserial:
 `pip install pyserial`
 
-4. Установить fluidsynth по инструкции выше
+4. Установить fluidsynth:
+
+**Linux:**
+
+`sudo apt-get install fluidsynth`
+
+**Windows:**
+
+Закинуть файл libfluidsynth.dll в папку, где установлен Python
 
 
 ## Запуск синтезатора:
