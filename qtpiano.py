@@ -1,21 +1,20 @@
 from PyQt5 import QtCore, QtWidgets, QtSerialPort
 from PyQt5.QtGui import QIcon, QFont
-from mingus.midi import fluidsynth 
+import fluidsynth
 import sys, os
 
 print(os.path.abspath("soundfonts/"))
 
 #-----------------------------Init Synth----------------------------------------------
-synth = fluidsynth.FluidSynthSequencer()
-synth.init()
+synth = fluidsynth.Synth(1)
 #Set gain to 1 in pyfluinsynth
 #print(synth.main_volume(1, 0))
 
 if sys.platform.startswith('win'):
-    synth.start_audio_output("dsound")
+    synth.start("dsound")
     
 elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-    synth.start_audio_output("alsa")
+    synth.start("alsa")
     
 
 #synth.load_sound_font('soundfonts/QUEST_O_TIME.SF2')
@@ -95,15 +94,15 @@ class Widget(QtWidgets.QWidget):
      
     def set_instrument(self, instr):
         self.instrument = instr
-        synth.set_instrument(0, int(instr))
+        synth.program_select(0, self.soundbank, 0, int(instr))
         self.infotxt.append("Set instrument: " + str(instr))
         
     def open_file(self):
         file = QtWidgets.QFileDialog.getOpenFileName(self, "Open .sf2 Soundbank", os.path.abspath("soundfonts/"), "Soundbanks (*.sf2)")
-        synth.load_sound_font(file[0])
+        self.soundbank = synth.sfload(file[0])
         self.infotxt.append("Opened soundfont: " + file[0])
         self.instr_box.setEnabled(True)
-        synth.set_instrument(0, 0)        
+        synth.program_select(0, self.soundbank, 0, 0)     
     
     def set_port(self, port):
         self.current_port = port
@@ -123,7 +122,7 @@ class Widget(QtWidgets.QWidget):
             #text = text.rstrip('\r\n')
             if cmd[0] == 144:
                 self.infotxt.append("Note: " + str(cmd[1]) + "   Velocity: " + str(cmd[2]))
-                synth.play_event(cmd[1], 0, cmd[2])
+                synth.noteon(0, cmd[1], cmd[2])
 
     @QtCore.pyqtSlot()
     def send(self):
