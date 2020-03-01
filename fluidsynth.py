@@ -32,7 +32,15 @@ from ctypes.util import find_library
 
 import six
 
-_fl = CDLL("libfluidsynth.dll")
+lib = (
+    find_library("fluidsynth")
+    or find_library("libfluidsynth")
+    or find_library("libfluidsynth-1")
+)
+if lib is None:
+    lib = "libfluidsynth.dll"
+
+_fl = CDLL(lib)
 
 
 def cfunc(name, result, *args):

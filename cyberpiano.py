@@ -1,8 +1,18 @@
-from PyQt5 import QtCore, QtSerialPort
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import QIcon, QFont
 import fluidsynth
 import sys, os
+
+try:
+    from PyQt5 import QtCore, QtSerialPort
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtGui import QIcon, QFont
+    
+except ModuleNotFoundError:
+    if sys.platform.startswith('win'):
+        os.system('pip install pyqt5')
+    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        os.system('sudo apt-get install python3-pyqt5')
+        os.system('sudo apt-get install python3-pyqt5.qtserialport')
+
 
 #print(os.path.abspath("soundfonts/"))
 
