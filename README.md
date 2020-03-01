@@ -1,25 +1,21 @@
-# CyberPiano
+# CyberPiano 
 - Простая Arduino Midi Клавиатура
 - Работа в качестве Midi клавиатуры
 - Работа в качестве синтезатора при помощи FluidSynth
 
 ## Файлы:
 - cyberpiano.py - основная программа
-- cyberpiano_old.py - старая версия на pygame
-- cp_obj.py - модуль для старой версии
 - fluidsynth.py - библиотека синтезатора
-- /fluidsynth/libfluidsynth.dll - библиотека fluidsynth для Windows
+- libfluidsynth.dll - библиотека fluidsynth для Windows
+- options.txt - файл настроек
 - /soundfonts - банки звуков .sf2
 
 ## Туду:
 - [x] Переписать фронтенд на Qt
+- [ ] Добавить отбражение клавиш на экране
 - [ ] Добавить возможность аккомпанинирования при помощи Midi файлов
 - [ ] Поковыряться с контейнерами
-- [x] Встроить библиотеки 
-- [x] Портировать программу для Windows 
-- [x] Сделать возможность загружать другой банк, не перезапуская программу
-- [x] Сделать переключение по каналам
-- [x] ~~Добавить другие способы загрузки сэмплов, кроме SF2~~
+
 
 ## Инструкция по установке:
 
@@ -29,27 +25,6 @@
 2.Установить fluidsynth для Linux:
 
 `sudo apt-get install fluidsynth`
-
-##Запуск старой версии
-
-1. Установить pygame:
-`pip install pygame`
-
-2. Установить mingus:
-`pip install mingus`
-
-3. Установить pyserial:
-`pip install pyserial`
-
-4. Установить fluidsynth:
-
-**Linux:**
-
-`sudo apt-get install fluidsynth`
-
-**Windows:**
-
-Закинуть файл libfluidsynth.dll в папку, где установлен Python
 
 
 ## Запуск синтезатора:
