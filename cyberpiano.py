@@ -44,6 +44,7 @@ class Widget(QWidget):
         
         self.soundbank = None
         self.instrument = 0
+        self.volume = 127
         
         #-----------------Title---------------------------
         self.setWindowTitle('CyberPiano')
@@ -70,7 +71,14 @@ class Widget(QWidget):
         # Options
         opt_menu = QAction('Options', self)
         opt_menu.setShortcut('F2')
-        opt_menu.triggered.connect(self.options_window)        
+        opt_menu.triggered.connect(self.options_window)   
+        
+        # Volume
+        sld = QSlider(QtCore.Qt.Horizontal, self)
+        sld.setMaximum(127)
+        sld.setValue(127)
+        sld.valueChanged[int].connect(self.set_volume)
+        self.sld_ = QLabel('Volume: 127', self)
         
         menubar = QMenuBar() 
         file_menu = menubar.addMenu('&File')
@@ -143,10 +151,16 @@ class Widget(QWidget):
         hlay2.addWidget(self.instr_box)
         hlay2.addWidget(self.open_button)
         
+        hlay3 = QHBoxLayout()
+        hlay3.addStretch(1)
+        hlay3.addWidget(self.sld_)
+        hlay3.addWidget(sld)
+        
         
         lay.setMenuBar(menubar)
         lay.addLayout(hlay1)
         lay.addLayout(hlay2)
+        lay.addLayout(hlay3)
         lay.addStretch(1)
         lay.addWidget(self.infotxt_)
         lay.addWidget(self.infotxt)
@@ -165,6 +179,10 @@ class Widget(QWidget):
         window = Help(self)
         window.show()    
         
+    def set_volume(self, vol):
+        self.volume = vol
+        self.sld_.setText("Volume: " + str(vol))
+    
     def info_dialog(self):
         msg = QMessageBox() #.about(self, 'About',"CyberPiano\nby far-galaxy")
         msg.setIcon(QMessageBox.Information)
@@ -227,7 +245,7 @@ class Widget(QWidget):
             #text = text.rstrip('\r\n')
             if cmd[0] == 144:
                 self.infotxt.append("Note: " + str(cmd[1]) + "   Velocity: " + str(cmd[2]))
-                synth.noteon(0, cmd[1], cmd[2])
+                synth.noteon(0, cmd[1], self.volume if cmd[2] != 0 else 0)
 
     @QtCore.pyqtSlot()
     def send(self):
@@ -266,7 +284,7 @@ class Help(QDialog):
         #-----------------Title---------------------------
         self.setWindowTitle('CyberPiano Help')
         self.setWindowIcon(QIcon('icon.png'))
-        self.resize(400, 300)
+        self.setFixedSize(400, 300)
         self.setFont(QFont("Calibri", 16, QFont.Normal))
         self.infotxt_ = QLabel("I can't help you :(", self)
         lay = QVBoxLayout(self)
