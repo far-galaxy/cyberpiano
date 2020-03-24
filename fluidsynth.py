@@ -26,10 +26,10 @@ soundcard yourself.
 FluidSynth works on all major platforms, so pyFluidSynth should also.
 """
 from __future__ import absolute_import
+import os
 
 from ctypes import *
 from ctypes.util import find_library
-
 import six
 
 lib = (
@@ -38,7 +38,7 @@ lib = (
     or find_library("libfluidsynth-1")
 )
 if lib is None:
-    lib = "libfluidsynth.dll"
+    lib = os.path.abspath("libfluidsynth.dll")
 
 _fl = CDLL(lib)
 

@@ -1,4 +1,7 @@
-import fluidsynth
+try:
+    import fluidsynth
+except ModuleNotFoundError:
+    os.system('pip install six')
 import sys, os
 
 try:
@@ -31,12 +34,16 @@ elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
 #synth.load_sound_font('soundfonts/QUEST_O_TIME.SF2')
 #synth.set_instrument(0, 0)
 
-opt = os.path.abspath('options.txt')
-opt_file = open(opt, 'r')
-recent_files = []
-for i in opt_file:
-    recent_files.append(i[:-1])
-opt_file.close()
+try:
+    opt = os.path.abspath('options.txt')
+    opt_file = open(opt, 'r')
+    recent_files = []
+    for i in opt_file:
+        recent_files.append(i[:-1])
+    opt_file.close()
+except FileNotFoundError:
+    opt_file = open(opt, 'w')
+    recent_files = []
 
 class Widget(QWidget):
     def __init__(self, parent=None):
