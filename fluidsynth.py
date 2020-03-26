@@ -34,8 +34,8 @@ import six
 
 lib = (
     find_library("fluidsynth")
-    or find_library("libfluidsynth")
-    or find_library("libfluidsynth-1")
+    #or find_library("libfluidsynth")
+    #or find_library("libfluidsynth-1")
 )
 if lib is None:
     lib = os.path.abspath("libfluidsynth.dll")

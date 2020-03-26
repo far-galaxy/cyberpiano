@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#-----------CYBERPIANO-------------
 try:
     import fluidsynth
 except ModuleNotFoundError:
@@ -16,34 +18,45 @@ except ModuleNotFoundError:
         os.system('sudo apt-get install python3-pyqt5')
         os.system('sudo apt-get install python3-pyqt5.qtserialport')
 
-
-#print(os.path.abspath("soundfonts/"))
-
 #-----------------------------Init Synth----------------------------------------------
 synth = fluidsynth.Synth(1)
 #Set gain to 1 in pyfluinsynth
 #print(synth.main_volume(1, 0))
 
+# Detect platform
 if sys.platform.startswith('win'):
     synth.start("dsound")
     
 elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
     synth.start("alsa")
     
-
-#synth.load_sound_font('soundfonts/QUEST_O_TIME.SF2')
-#synth.set_instrument(0, 0)
-
+# Open list of recent files
 try:
-    opt = os.path.abspath('options.txt')
-    opt_file = open(opt, 'r')
+    lsf = os.path.abspath('settings/last_sf.txt')
+    lsf_file = open(lsf, 'r')
     recent_files = []
-    for i in opt_file:
+    for i in lsf_file:
         recent_files.append(i[:-1])
-    opt_file.close()
+    lsf_file.close()
 except FileNotFoundError:
-    opt_file = open(opt, 'w')
+    lsf_file = open(lsf, 'w')
     recent_files = []
+    
+# Open list of languages
+lst = os.path.abspath('settings/lang/list.txt')
+langlist_file = open(lst, 'r')
+langs = []
+lang = int(langlist_file.readline()[:-1])
+for i in langlist_file:
+    langs.append(i.replace("\n","").split())
+langlist_file.close()
+    
+
+    
+
+
+
+
 
 class Widget(QWidget):
     def __init__(self, parent=None):
@@ -52,6 +65,9 @@ class Widget(QWidget):
         self.soundbank = None
         self.instrument = 0
         self.volume = 127
+
+        self.started = False
+        self.set_lang(lang)
         
         #-----------------Title---------------------------
         self.setWindowTitle('CyberPiano')
@@ -64,55 +80,67 @@ class Widget(QWidget):
         
         #-----------------Keyboard---------------------------
                 
+        #-----------------Menubar---------------------------
+        menubar = QMenuBar() 
+        
+        #  File menu
+        file_menu = menubar.addMenu('&'+self.lp['file'])
         
         # Exit
-        self.exitAction = QAction('&Exit', self)
+        self.exitAction = QAction('&'+self.lp['exit'], self)
         self.exitAction.setShortcut('Ctrl+Q')
-        self.exitAction.triggered.connect(qApp.quit)        
-            
-        #
-        open_file_menu = QAction('Load soundfont', self)
+        self.exitAction.triggered.connect(qApp.quit)  
+        #file_menu.addAction(opt_menu)
+        file_menu.addSeparator()
+        file_menu.addAction(self.exitAction)         
+        
+        #  Soundfont menu
+        sf2_menu = menubar.addMenu('&'+self.lp['sf'])
+        
+        # Load soundfont
+        open_file_menu = QAction(self.lp['load_sf'], self)
         open_file_menu.setShortcut('Ctrl+O')
-        open_file_menu.triggered.connect(self.open_file)   
+        open_file_menu.triggered.connect(self.open_file) 
+
+        # Recent soundfonts
+        self.recent_menu = QMenu(self.lp['res_sf'], self)
+        for i in recent_files:
+            self.recent_menu.addAction(i, lambda i=i: self.load_file(i))  
+
+        sf2_menu.addAction(open_file_menu) 
+        sf2_menu.addMenu(self.recent_menu)  
+
+        # Options menu
+        opt_menu = menubar.addMenu('&'+self.lp['options'])
+        lang_menu = QMenu(self.lp['language'], self)
+        for i in range(len(langs)):
+            lang_menu.addAction(QIcon('settings/lang/'+langs[i][1]+'.png'),langs[i][0], lambda i=i: self.set_lang(i))
+
+        opt_menu.addMenu(lang_menu) 
         
-        # Options
-        opt_menu = QAction('Options', self)
-        opt_menu.setShortcut('F2')
-        opt_menu.triggered.connect(self.options_window)   
-        
-        # Volume
-        sld = QSlider(QtCore.Qt.Horizontal, self)
-        sld.setMaximum(127)
-        sld.setValue(127)
-        sld.valueChanged[int].connect(self.set_volume)
-        self.sld_ = QLabel('Volume: 127', self)
-        
-        menubar = QMenuBar() 
-        file_menu = menubar.addMenu('&File')
-        sf2_menu = menubar.addMenu('&Soundfonts')
-        
-        help_menu = menubar.addAction('&Help')
+        #  Help menu
+        help_menu = menubar.addAction('&'+self.lp['help'])
         help_menu.triggered.connect(self.help_window)  
         
-        about_menu = menubar.addAction('&About')
+        # About menu
+        about_menu = menubar.addAction('&'+self.lp['about'])
         about_menu.triggered.connect(self.info_dialog)  
         help_menu.setShortcut('F1')
+       
         
-        self.recent_menu = QMenu('Recent soundfonts', self)
-        for i in recent_files:
-            self.recent_menu.addAction(i, lambda i=i: self.load_file(i))
+        # Options
+        #opt_menu = QAction('Options', self)
+        #opt_menu.setShortcut('F2')
+        #opt_menu.triggered.connect(self.options_window)   
         
         
-        sf2_menu.addAction(open_file_menu) 
-        sf2_menu.addMenu(self.recent_menu) 
         
-        file_menu.addAction(opt_menu)
-        file_menu.addSeparator()
-        file_menu.addAction(self.exitAction) 
         
+        
+        #--------------Main Window----------------------------
         # Output textbox
         self.infotxt = QTextEdit(readOnly=True)
-        self.infotxt_ = QLabel('Information:', self)
+        self.infotxt_ = QLabel(self.lp['information']+':', self)
         
         # Ports List
         ports = self.find_ports()
@@ -122,7 +150,7 @@ class Widget(QWidget):
         for i in ports:
             self.ports_box.addItem(i)   
         self.ports_box.activated[str].connect(self.set_port) 
-        self.ports_box_ = QLabel('Port:', self)
+        self.ports_box_ = QLabel(self.lp['port']+':', self)
         
         # Instruments List
         self.instr_box = QComboBox(self)
@@ -130,22 +158,24 @@ class Widget(QWidget):
             self.instr_box.addItem(str(i)) 
         self.instr_box.activated[str].connect(self.set_instrument)  
         self.instr_box.setEnabled(False)
-        self.instr_box_ = QLabel('Instrument:', self)     
+        self.instr_box_ = QLabel(self.lp['instrument']+':', self)     
         
         
         # Connect button
-        self.button = QPushButton(text="Connect", checkable=True, toggled=self.on_toggled)
+        self.button = QPushButton(text=self.lp['connect'], checkable=True, toggled=self.on_toggled)
         
-        self.open_button = QPushButton("Load soundfont", self)
+        self.open_button = QPushButton(self.lp['load_sf'], self)
         self.open_button.clicked.connect(self.open_file)
         
+        # Volume
+        sld = QSlider(QtCore.Qt.Horizontal, self)
+        sld.setMaximum(127)
+        sld.setValue(127)
+        sld.valueChanged[int].connect(self.set_volume)
+        self.sld_ = QLabel(self.lp['volume'] + ': 127', self)
         
         
         lay = QVBoxLayout(self)
-        
-        #menulay = QHBoxLayout()
-        #menulay.setMenuBar(self.menubar)
-        #self.setMenuBar(self.menubar)
         
         hlay1 = QHBoxLayout()
         hlay1.addWidget(self.ports_box_)
@@ -174,8 +204,32 @@ class Widget(QWidget):
         
         
         
+        
 
         self.serial = QtSerialPort.QSerialPort(self.current_port, baudRate=QtSerialPort.QSerialPort.Baud115200, readyRead=self.receive)
+   
+    def set_lang(self, num):
+        path = os.path.abspath('settings/lang/'+langs[num][1]+'.lp')
+        lang_file = open(path, 'r', encoding='utf-8')
+        self.lp = {}
+        for i in lang_file:
+            key, word = i.split(' = ')
+            self.lp[key] = word.replace("\n", "")
+        langlist_file = open(lst, 'w')
+        langlist_file.write(str(num)+'\n')
+        for i in langs:
+            langlist_file.write(' '.join(i)+'\n')
+        langlist_file.close()
+        
+        if self.started:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText(self.lp['reboot'])
+            msg.setWindowTitle(self.lp['reboot_title'])    
+            #msg.resize(400,300)
+            msg.exec()
+        else:
+            self.started = True
    
     def options_window(self):
         opt_window = Options(self)
@@ -188,13 +242,13 @@ class Widget(QWidget):
         
     def set_volume(self, vol):
         self.volume = vol
-        self.sld_.setText("Volume: " + str(vol))
+        self.sld_.setText(self.lp['volume']+": " + str(vol))
     
     def info_dialog(self):
         msg = QMessageBox() #.about(self, 'About',"CyberPiano\nby far-galaxy")
         msg.setIcon(QMessageBox.Information)
-        msg.setText("CyberPiano v.0.22\nby far-galaxy")
-        msg.setWindowTitle("About")    
+        msg.setText("CyberPiano v.0.30\nby far-galaxy")
+        msg.setWindowTitle(self.lp['about'])    
         #msg.resize(400,300)
         msg.exec()
         
@@ -202,10 +256,10 @@ class Widget(QWidget):
     def set_instrument(self, instr):
         self.instrument = instr 
         synth.program_select(0, self.soundbank, 0, int(self.instrument))
-        self.infotxt.append("Set instrument: " + str(self.instrument))
+        self.infotxt.append(self.lp['set_instr']+": " + str(self.instrument))
         
     def open_file(self):
-        file = QFileDialog.getOpenFileName(self, "Load .sf2 Soundfont", os.path.abspath("soundfonts/"), "Soundfonts (*.sf2)")
+        file = QFileDialog.getOpenFileName(self, self.lp['load_sf2_file'], os.path.abspath("soundfonts/"), "Soundfonts (*.sf2)")
         self.load_file(file[0])
             
     def load_file(self, path):
@@ -218,15 +272,15 @@ class Widget(QWidget):
                 recent_files.pop(recent_files.index(path))
                 recent_files.insert(0, path)
             
-            opt_file = open(opt, 'w')
+            lsf_file = open(lsf, 'w')
             for i in recent_files[:10]:
-                opt_file.write(i + '\n')
-            opt_file.close()
+                lsf_file.write(i + '\n')
+            lsf_file.close()
             self.recent_menu.clear()
             for i in recent_files[:10]:
                 self.recent_menu.addAction(i, lambda i=i: self.load_file(i))
                     
-            self.infotxt.append("Opened soundfont: " + path)
+            self.infotxt.append(self.lp['opened_sf']+": " + path)
             self.instr_box.setEnabled(True)
             synth.program_select(0, self.soundbank, 0, 0)         
     
@@ -251,7 +305,7 @@ class Widget(QWidget):
             cmd = self.serial.read(3)
             #text = text.rstrip('\r\n')
             if cmd[0] == 144:
-                self.infotxt.append("Note: " + str(cmd[1]) + "   Velocity: " + str(cmd[2]))
+                self.infotxt.append(self.lp['note'] + ": " + str(cmd[1]) + "    " + self.lp['vel'] + ": "+ str(cmd[2]))
                 synth.noteon(0, cmd[1], self.volume if cmd[2] != 0 else 0)
 
     @QtCore.pyqtSlot()
@@ -260,29 +314,16 @@ class Widget(QWidget):
 
     @QtCore.pyqtSlot(bool)
     def on_toggled(self, checked):
-        self.button.setText("Disconnect" if checked else "Connect")
+        self.button.setText(self.lp['disconnect'] if checked else self.lp['connect'])
         if checked:
             if not self.serial.isOpen():
                 if not self.serial.open(QtCore.QIODevice.ReadWrite):
                     self.button.setChecked(False)
-                    self.infotxt.append("Connected to port: " + str(self.current_port))
+                    self.infotxt.append(self.lp['connected'] + ": " + str(self.current_port))
         else:
             self.serial.close()
-            self.infotxt.append("Disconnected port: " + str(self.current_port))
+            self.infotxt.append(self.lp['disconnected'] + ": " + str(self.current_port))
 
-
-class Options(QDialog):
-    def __init__(self, parent=None):
-        super(Options, self).__init__(parent)
-        
-        #-----------------Title---------------------------
-        self.setWindowTitle('CyberPiano Options')
-        self.setWindowIcon(QIcon('icon.png'))
-        self.resize(400, 300)
-        self.setFont(QFont("Calibri", 16, QFont.Normal))
-        self.infotxt_ = QLabel("It's empty like in my soul", self)
-        lay = QVBoxLayout(self)
-        lay.addWidget(self.infotxt_)
 
 class Help(QDialog):
     def __init__(self, parent=None):
