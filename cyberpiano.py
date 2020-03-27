@@ -92,11 +92,15 @@ class Widget(QWidget):
         #  File menu
         file_menu = menubar.addMenu('&'+self.lp['file'])
         
+        stop_all_menu = QAction(self.lp['stop_all'], self)
+        stop_all_menu.setShortcut('Ctrl+D')
+        stop_all_menu.triggered.connect(self.stop_all)         
+        
         # Exit
         self.exitAction = QAction('&'+self.lp['exit'], self)
         self.exitAction.setShortcut('Ctrl+Q')
         self.exitAction.triggered.connect(qApp.quit)  
-        #file_menu.addAction(opt_menu)
+        file_menu.addAction(stop_all_menu)
         file_menu.addSeparator()
         file_menu.addAction(self.exitAction)         
         
@@ -117,18 +121,17 @@ class Widget(QWidget):
         sf2_menu.addMenu(self.recent_menu)  
 
         # Options menu
-        opt_menu = menubar.addMenu('&'+self.lp['options'])
-        lang_menu = QMenu(self.lp['language'], self)
-        for i in range(len(langs)):
-            lang_menu.addAction(QIcon('settings/lang/'+langs[i][1]+'.png'),langs[i][0], lambda i=i: self.set_lang(i))
+        opt_menu = menubar.addAction('&'+self.lp['options'])
+        opt_menu.triggered.connect(self.options_window) 
+        #lang_menu = QMenu(self.lp['language'], self)
+        #for i in range(len(langs)):
+            #lang_menu.addAction(QIcon('settings/lang/'+langs[i][1]+'.png'),langs[i][0], lambda i=i: self.set_lang(i))
 
-        stop_all_menu = QAction(self.lp['stop_all'], self)
-        stop_all_menu.setShortcut('Ctrl+D')
-        stop_all_menu.triggered.connect(self.stop_all) 
+        
 
-        opt_menu.addMenu(lang_menu) 
-        opt_menu.addSeparator()
-        opt_menu.addAction(stop_all_menu) 
+        #opt_menu.addMenu(lang_menu) 
+        #opt_menu.addSeparator()
+        #opt_menu.addAction(stop_all_menu) 
         
         #  Help menu
         help_menu = menubar.addAction('&'+self.lp['help'])
@@ -257,7 +260,7 @@ class Widget(QWidget):
         for i in range(len(self.key_state)):
             if not i%12 in white_keys:
                 painter.setBrush(QtCore.Qt.yellow if self.key_state[i] else QBrush(QColor(0, 0, 0), QtCore.Qt.SolidPattern))
-                painter.drawRect(dx + black_pos*(wk) + wk/2, y, wk, h)
+                painter.drawRect(dx + black_pos*(wk) + wk//2, y, wk, h)
                 black_pos += 2 if ( i%12 == 3 or i%12 == 10) else 1
                 
         painter.setPen(QPen(QtCore.Qt.black,  1, QtCore.Qt.SolidLine))
@@ -408,6 +411,36 @@ class Help(QDialog):
         self.infotxt_ = QLabel("I can't help you :(", self)
         lay = QVBoxLayout(self)
         lay.addWidget(self.infotxt_)
+        
+class Options(QDialog):
+    def __init__(self, parent=None):
+        super(Options, self).__init__(parent)
+        
+        self.lp = parent.lp
+        self.langs = langs
+        
+        #-----------------Title---------------------------
+        self.setWindowTitle(self.lp['options'])
+        self.setWindowIcon(QIcon('icon.png'))
+        self.setFixedSize(400, 300)
+        self.setFont(QFont("Calibri", 16, QFont.Normal))
+        
+        #-----------------Language-----------------------
+        self.lang_ = QLabel(self.lp['language'] + ":", self)
+        self.lang_box = QComboBox(self)
+        for i in range(len(langs)):
+            self.lang_box.addItem(QIcon('settings/lang/'+langs[i][1]+'.png'),langs[i][0], i)
+        self.lang_box.setCurrentIndex(lang)
+        self.lang_box.activated.connect(parent.set_lang)        
+        
+        lay = QVBoxLayout(self)
+        
+        hlay1 = QHBoxLayout()
+        hlay1.addWidget(self.lang_)
+        hlay1.addWidget(self.lang_box)
+        
+        lay.addLayout(hlay1)
+
 
 if __name__ == '__main__':
     import sys
