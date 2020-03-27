@@ -155,7 +155,8 @@ class Widget(QWidget):
         #--------------Main Window----------------------------
         # Output textbox
         self.infotxt = QTextEdit(readOnly=True)
-        self.infotxt_ = QLabel(self.lp['information']+':', self)
+        #self.infotxt_ = QLabel(self.lp['information']+':', self)
+        self.infotxt_ = QLabel(" ", self)
         
         # Ports List
         ports = self.find_ports()
@@ -198,38 +199,35 @@ class Widget(QWidget):
         self.sld_ = QLabel(self.lp['volume'] + ': 127', self)
         
         
-        lay = QVBoxLayout(self)
+        grid = QGridLayout()
+        grid.setMenuBar(menubar)
         
-        hlay1 = QHBoxLayout()
-        hlay1.addWidget(self.ports_box_)
-        hlay1.addWidget(self.ports_box)
-        hlay1.addWidget(self.button)
+        grid.addWidget(self.ports_box_,  0, 0, 1, 1)
+        grid.addWidget(self.ports_box,   0, 1, 1, 3)
+        grid.addWidget(self.button,      0, 4, 1, 2)    
         
+        grid.addWidget(self.instr_box_,  1, 0, 1, 1)
+        grid.addWidget(self.instr_box,   1, 1, 1, 3)
+        grid.addWidget(self.open_button, 1, 4, 1, 2)  
         
-        hlay2 = QHBoxLayout()
-        hlay2.addWidget(self.instr_box_)
-        hlay2.addWidget(self.instr_box)
-        hlay2.addWidget(self.open_button)
+        grid.addWidget(oct_,             2, 0)
+        grid.addWidget(oct_d_button,     2, 1)
+        grid.addWidget(self.oct_d,       2, 2)
+        grid.addWidget(oct_u_button,     2, 3)
+        grid.addWidget(self.sld_,        2, 4)
+        grid.addWidget(sld,              2, 5)  
         
-        hlay3 = QHBoxLayout()
-        hlay3.addWidget(oct_)
-        hlay3.addStretch(1)
-        hlay3.addWidget(oct_d_button)
-        hlay3.addWidget(self.oct_d)
-        hlay3.addWidget(oct_u_button)
-        hlay3.addStretch(1)
-        hlay3.addWidget(self.sld_)
-        hlay3.addWidget(sld)
+        grid.addWidget(self.infotxt_,     4, 0, 2, 6)
+        #grid.addWidget(self.infotxt,      5, 0, -1, 6)        
         
-        
-        lay.setMenuBar(menubar)
-        lay.addLayout(hlay1)
-        lay.addLayout(hlay2)
-        lay.addLayout(hlay3)
+        """
+
         lay.addStretch(1)
         lay.addWidget(self.infotxt_)
         lay.addWidget(self.infotxt)
+        """
         
+        self.setLayout(grid)
         
         
         
@@ -347,6 +345,7 @@ class Widget(QWidget):
                 self.recent_menu.addAction(i, lambda i=i: self.load_file(i))
                     
             self.infotxt.append(self.lp['opened_sf']+": " + path)
+            self.infotxt_.setText(path.split("/")[-1][:-4])
             self.instr_box.setEnabled(True)
             synth.program_select(0, self.soundbank, 0, 0)         
     
