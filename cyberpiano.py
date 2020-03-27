@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 #-----------CYBERPIANO-------------
+import sys, os
 try:
     import fluidsynth
 except ModuleNotFoundError:
     os.system('pip install six')
-import sys, os
+
 
 try:
     from PyQt5 import QtCore, QtSerialPort
     from PyQt5.QtWidgets import *
-    from PyQt5.QtGui import QIcon, QFont
+    from PyQt5.QtGui import QIcon, QFont, QPainter, QColor, QPen, QBrush
     
 except ModuleNotFoundError:
     if sys.platform.startswith('win'):
@@ -17,6 +18,9 @@ except ModuleNotFoundError:
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
         os.system('sudo apt-get install python3-pyqt5')
         os.system('sudo apt-get install python3-pyqt5.qtserialport')
+    from PyQt5 import QtCore, QtSerialPort
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtGui import QIcon, QFont    
 
 #-----------------------------Init Synth----------------------------------------------
 synth = fluidsynth.Synth(1)
@@ -65,9 +69,11 @@ class Widget(QWidget):
         self.soundbank = None
         self.instrument = 0
         self.volume = 127
+        self.drag = 0
 
         self.started = False
         self.set_lang(lang)
+        self.key_state = [False for i in range(128)]
         
         #-----------------Title---------------------------
         self.setWindowTitle('CyberPiano')
@@ -75,8 +81,8 @@ class Widget(QWidget):
         self.resize(800, 600)
         self.setFont(QFont("Calibri", 16, QFont.Normal))
         
-        w = self.frameGeometry().width()
-        h = self.frameGeometry().height()
+        self.w = self.frameGeometry().width()
+        self.h = self.frameGeometry().height()
         
         #-----------------Keyboard---------------------------
                 
@@ -116,7 +122,13 @@ class Widget(QWidget):
         for i in range(len(langs)):
             lang_menu.addAction(QIcon('settings/lang/'+langs[i][1]+'.png'),langs[i][0], lambda i=i: self.set_lang(i))
 
+        stop_all_menu = QAction(self.lp['stop_all'], self)
+        stop_all_menu.setShortcut('Ctrl+D')
+        stop_all_menu.triggered.connect(self.stop_all) 
+
         opt_menu.addMenu(lang_menu) 
+        opt_menu.addSeparator()
+        opt_menu.addAction(stop_all_menu) 
         
         #  Help menu
         help_menu = menubar.addAction('&'+self.lp['help'])
@@ -167,6 +179,14 @@ class Widget(QWidget):
         self.open_button = QPushButton(self.lp['load_sf'], self)
         self.open_button.clicked.connect(self.open_file)
         
+        # Octaves
+        oct_ = QLabel(self.lp['octave'] + ":", self)
+        self.oct_d = QLabel('0', self)
+        oct_d_button = QPushButton('<', self)
+        oct_d_button.clicked.connect(self.oct_down)
+        oct_u_button = QPushButton('>', self)
+        oct_u_button.clicked.connect(self.oct_up)        
+        
         # Volume
         sld = QSlider(QtCore.Qt.Horizontal, self)
         sld.setMaximum(127)
@@ -189,6 +209,11 @@ class Widget(QWidget):
         hlay2.addWidget(self.open_button)
         
         hlay3 = QHBoxLayout()
+        hlay3.addWidget(oct_)
+        hlay3.addStretch(1)
+        hlay3.addWidget(oct_d_button)
+        hlay3.addWidget(self.oct_d)
+        hlay3.addWidget(oct_u_button)
         hlay3.addStretch(1)
         hlay3.addWidget(self.sld_)
         hlay3.addWidget(sld)
@@ -207,7 +232,37 @@ class Widget(QWidget):
         
 
         self.serial = QtSerialPort.QSerialPort(self.current_port, baudRate=QtSerialPort.QSerialPort.Baud115200, readyRead=self.receive)
-   
+    
+    def paintEvent(self, event):    
+        painter = QPainter(self)
+        self.w = self.frameGeometry().width()
+        wk = (self.w)//75
+        dx = (self.w - wk*75)//2
+        
+        y = 200
+        h = 75
+        
+        white_keys = [0,2,4,5,7,9,11]
+        white_pos = 0
+        black_pos = 0
+        
+        painter.setPen(QPen(QtCore.Qt.black,  1, QtCore.Qt.SolidLine))
+        for i in range(len(self.key_state)):
+            if i%12 in white_keys:
+                painter.setBrush(QtCore.Qt.yellow if self.key_state[i] else QBrush(QColor(255, 255, 255), QtCore.Qt.SolidPattern))
+                painter.drawRect(dx + white_pos*wk, y, wk, 2*h)  
+                white_pos += 1
+                
+        painter.setPen(QPen(QtCore.Qt.white,  1, QtCore.Qt.SolidLine))
+        for i in range(len(self.key_state)):
+            if not i%12 in white_keys:
+                painter.setBrush(QtCore.Qt.yellow if self.key_state[i] else QBrush(QColor(0, 0, 0), QtCore.Qt.SolidPattern))
+                painter.drawRect(dx + black_pos*(wk) + wk/2, y, wk, h)
+                black_pos += 2 if ( i%12 == 3 or i%12 == 10) else 1
+                
+        painter.setPen(QPen(QtCore.Qt.black,  1, QtCore.Qt.SolidLine))
+        painter.drawLine(dx, y, dx + wk*75 , y)    
+            
     def set_lang(self, num):
         path = os.path.abspath('settings/lang/'+langs[num][1]+'.lp')
         lang_file = open(path, 'r', encoding='utf-8')
@@ -243,7 +298,15 @@ class Widget(QWidget):
     def set_volume(self, vol):
         self.volume = vol
         self.sld_.setText(self.lp['volume']+": " + str(vol))
+        
+    def oct_down(self):
+        self.drag -= 1
+        self.oct_d.setText(str(self.drag))
     
+    def oct_up(self):
+        self.drag += 1
+        self.oct_d.setText(str(self.drag))    
+        
     def info_dialog(self):
         msg = QMessageBox() #.about(self, 'About',"CyberPiano\nby far-galaxy")
         msg.setIcon(QMessageBox.Information)
@@ -295,18 +358,26 @@ class Widget(QWidget):
             port.append(info.portName())
         return port
     
-    def draw_keyboard(self, data):
-        qp = QPainter()
-        qp.begin(self)        
+
+        
+    def stop_all(self):
+        for i in range(128):
+            synth.noteon(0, i, 0) 
+            self.key_state[i] = False
+        self.update()
 
     @QtCore.pyqtSlot()
     def receive(self):
         while self.serial.bytesAvailable():
-            cmd = self.serial.read(3)
-            #text = text.rstrip('\r\n')
-            if cmd[0] == 144:
-                self.infotxt.append(self.lp['note'] + ": " + str(cmd[1]) + "    " + self.lp['vel'] + ": "+ str(cmd[2]))
-                synth.noteon(0, cmd[1], self.volume if cmd[2] != 0 else 0)
+            cmd, note, vel = self.serial.read(3)
+            note += (self.drag*12)
+            if note > 127: note = 127
+            if note < 0: note = 0
+            if cmd == 144:
+                self.infotxt.append(self.lp['note'] + ": " + str(note) + "    " + self.lp['vel'] + ": "+ str(vel))
+                synth.noteon(0, note, self.volume if vel != 0 else 0)
+                self.key_state[note] = True if vel != 0 else False
+                self.update()
 
     @QtCore.pyqtSlot()
     def send(self):
