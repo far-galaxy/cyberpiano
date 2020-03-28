@@ -34,6 +34,24 @@ if sys.platform.startswith('win'):
 elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
     synth.start("alsa")
     
+# Open options file
+try:
+    opt = os.path.abspath('settings/options.txt')
+    opt_file = open(opt, 'r')
+    opts = opt_file.readline().replace("\n", "").split()
+    octaves = int(opts[0])
+    first_oct = int(opts[1])
+    auto_con = int(opts[2])
+    opt_file.close()
+    
+except FileNotFoundError:
+    opt_file = open(opt, 'w')
+    octaves = 10
+    first_oct = 0
+    opt_file.write("10 0 0")
+    opt_file.close()
+
+    
 # Open list of recent files
 try:
     lsf = os.path.abspath('settings/last_sf.txt')
@@ -70,6 +88,9 @@ class Widget(QWidget):
         self.instrument = 0
         self.volume = 127
         self.drag = 0
+        self.octaves = octaves
+        self.first_oct = first_oct
+        self.auto_con = auto_con
 
         self.started = False
         self.set_lang(lang)
@@ -83,9 +104,7 @@ class Widget(QWidget):
         
         self.w = self.frameGeometry().width()
         self.h = self.frameGeometry().height()
-        
-        #-----------------Keyboard---------------------------
-                
+                        
         #-----------------Menubar---------------------------
         menubar = QMenuBar() 
         
@@ -99,13 +118,7 @@ class Widget(QWidget):
         # Exit
         self.exitAction = QAction('&'+self.lp['exit'], self)
         self.exitAction.setShortcut('Ctrl+Q')
-        self.exitAction.triggered.connect(qApp.quit)  
-        file_menu.addAction(stop_all_menu)
-        file_menu.addSeparator()
-        file_menu.addAction(self.exitAction)         
-        
-        #  Soundfont menu
-        sf2_menu = menubar.addMenu('&'+self.lp['sf'])
+        self.exitAction.triggered.connect(qApp.quit)               
         
         # Load soundfont
         open_file_menu = QAction(self.lp['load_sf'], self)
@@ -117,21 +130,17 @@ class Widget(QWidget):
         for i in recent_files:
             self.recent_menu.addAction(i, lambda i=i: self.load_file(i))  
 
-        sf2_menu.addAction(open_file_menu) 
-        sf2_menu.addMenu(self.recent_menu)  
+        file_menu.addAction(open_file_menu) 
+        file_menu.addMenu(self.recent_menu)
+        file_menu.addSeparator()
+        file_menu.addAction(stop_all_menu)
+        file_menu.addSeparator()
+        file_menu.addAction(self.exitAction)            
 
         # Options menu
         opt_menu = menubar.addAction('&'+self.lp['options'])
         opt_menu.triggered.connect(self.options_window) 
-        #lang_menu = QMenu(self.lp['language'], self)
-        #for i in range(len(langs)):
-            #lang_menu.addAction(QIcon('settings/lang/'+langs[i][1]+'.png'),langs[i][0], lambda i=i: self.set_lang(i))
-
-        
-
-        #opt_menu.addMenu(lang_menu) 
-        #opt_menu.addSeparator()
-        #opt_menu.addAction(stop_all_menu) 
+        opt_menu.setShortcut('F2')
         
         #  Help menu
         help_menu = menubar.addAction('&'+self.lp['help'])
@@ -141,21 +150,10 @@ class Widget(QWidget):
         about_menu = menubar.addAction('&'+self.lp['about'])
         about_menu.triggered.connect(self.info_dialog)  
         help_menu.setShortcut('F1')
-       
-        
-        # Options
-        #opt_menu = QAction('Options', self)
-        #opt_menu.setShortcut('F2')
-        #opt_menu.triggered.connect(self.options_window)   
-        
-        
-        
-        
+            
         
         #--------------Main Window----------------------------
         # Output textbox
-        self.infotxt = QTextEdit(readOnly=True)
-        #self.infotxt_ = QLabel(self.lp['information']+':', self)
         self.infotxt_ = QLabel(" ", self)
         
         # Ports List
@@ -217,15 +215,7 @@ class Widget(QWidget):
         grid.addWidget(self.sld_,        2, 4)
         grid.addWidget(sld,              2, 5)  
         
-        grid.addWidget(self.infotxt_,     4, 0, 2, 6)
-        #grid.addWidget(self.infotxt,      5, 0, -1, 6)        
-        
-        """
-
-        lay.addStretch(1)
-        lay.addWidget(self.infotxt_)
-        lay.addWidget(self.infotxt)
-        """
+        grid.addWidget(self.infotxt_,     3, 0)    
         
         self.setLayout(grid)
         
@@ -233,12 +223,13 @@ class Widget(QWidget):
         
 
         self.serial = QtSerialPort.QSerialPort(self.current_port, baudRate=QtSerialPort.QSerialPort.Baud115200, readyRead=self.receive)
+        if self.auto_con == 1: self.on_toggled(True)
     
     def paintEvent(self, event):    
         painter = QPainter(self)
         self.w = self.frameGeometry().width()
-        wk = (self.w)//75
-        dx = (self.w - wk*75)//2
+        wk = (self.w)//(self.octaves*7)
+        dx = (self.w - wk*(self.octaves*7))//2
         
         y = 200
         h = 75
@@ -248,21 +239,21 @@ class Widget(QWidget):
         black_pos = 0
         
         painter.setPen(QPen(QtCore.Qt.black,  1, QtCore.Qt.SolidLine))
-        for i in range(len(self.key_state)):
+        for i in range(len(self.key_state[self.first_oct*12 : self.first_oct*12+self.octaves*12])):
             if i%12 in white_keys:
-                painter.setBrush(QtCore.Qt.yellow if self.key_state[i] else QBrush(QColor(255, 255, 255), QtCore.Qt.SolidPattern))
+                painter.setBrush(QtCore.Qt.yellow if self.key_state[i+self.first_oct*12] else QBrush(QColor(255, 255, 255), QtCore.Qt.SolidPattern))
                 painter.drawRect(dx + white_pos*wk, y, wk, 2*h)  
                 white_pos += 1
                 
         painter.setPen(QPen(QtCore.Qt.white,  1, QtCore.Qt.SolidLine))
-        for i in range(len(self.key_state)):
+        for i in range(len(self.key_state[self.first_oct*12 : self.first_oct*12+self.octaves*12])):
             if not i%12 in white_keys:
-                painter.setBrush(QtCore.Qt.yellow if self.key_state[i] else QBrush(QColor(0, 0, 0), QtCore.Qt.SolidPattern))
+                painter.setBrush(QtCore.Qt.yellow if self.key_state[i+self.first_oct*12] else QBrush(QColor(0, 0, 0), QtCore.Qt.SolidPattern))
                 painter.drawRect(dx + black_pos*(wk) + wk//2, y, wk, h)
                 black_pos += 2 if ( i%12 == 3 or i%12 == 10) else 1
                 
         painter.setPen(QPen(QtCore.Qt.black,  1, QtCore.Qt.SolidLine))
-        painter.drawLine(dx, y, dx + wk*75 , y)    
+        painter.drawLine(dx, y, dx + wk*self.octaves*7 , y)    
             
     def set_lang(self, num):
         path = os.path.abspath('settings/lang/'+langs[num][1]+'.lp')
@@ -282,7 +273,6 @@ class Widget(QWidget):
             msg.setIcon(QMessageBox.Warning)
             msg.setText(self.lp['reboot'])
             msg.setWindowTitle(self.lp['reboot_title'])    
-            #msg.resize(400,300)
             msg.exec()
         else:
             self.started = True
@@ -290,7 +280,6 @@ class Widget(QWidget):
     def options_window(self):
         opt_window = Options(self)
         opt_window.show()
-        #opt_window._exec_()
     
     def help_window(self):
         window = Help(self)
@@ -309,18 +298,15 @@ class Widget(QWidget):
         self.oct_d.setText(str(self.drag))    
         
     def info_dialog(self):
-        msg = QMessageBox() #.about(self, 'About',"CyberPiano\nby far-galaxy")
+        msg = QMessageBox() 
         msg.setIcon(QMessageBox.Information)
         msg.setText("CyberPiano v.0.30\nby far-galaxy")
         msg.setWindowTitle(self.lp['about'])    
-        #msg.resize(400,300)
         msg.exec()
-        
-     
+             
     def set_instrument(self, instr):
         self.instrument = instr 
         synth.program_select(0, self.soundbank, 0, int(self.instrument))
-        self.infotxt.append(self.lp['set_instr']+": " + str(self.instrument))
         
     def open_file(self):
         file = QFileDialog.getOpenFileName(self, self.lp['load_sf2_file'], os.path.abspath("soundfonts/"), "Soundfonts (*.sf2)")
@@ -344,7 +330,6 @@ class Widget(QWidget):
             for i in recent_files[:10]:
                 self.recent_menu.addAction(i, lambda i=i: self.load_file(i))
                     
-            self.infotxt.append(self.lp['opened_sf']+": " + path)
             self.infotxt_.setText(path.split("/")[-1][:-4])
             self.instr_box.setEnabled(True)
             synth.program_select(0, self.soundbank, 0, 0)         
@@ -376,7 +361,6 @@ class Widget(QWidget):
             if note > 127: note = 127
             if note < 0: note = 0
             if cmd == 144:
-                self.infotxt.append(self.lp['note'] + ": " + str(note) + "    " + self.lp['vel'] + ": "+ str(vel))
                 synth.noteon(0, note, self.volume if vel != 0 else 0)
                 self.key_state[note] = True if vel != 0 else False
                 self.update()
@@ -392,10 +376,8 @@ class Widget(QWidget):
             if not self.serial.isOpen():
                 if not self.serial.open(QtCore.QIODevice.ReadWrite):
                     self.button.setChecked(False)
-                    self.infotxt.append(self.lp['connected'] + ": " + str(self.current_port))
         else:
             self.serial.close()
-            self.infotxt.append(self.lp['disconnected'] + ": " + str(self.current_port))
 
 
 class Help(QDialog):
@@ -414,7 +396,7 @@ class Help(QDialog):
 class Options(QDialog):
     def __init__(self, parent=None):
         super(Options, self).__init__(parent)
-        
+        self.parent = parent
         self.lp = parent.lp
         self.langs = langs
         
@@ -430,7 +412,31 @@ class Options(QDialog):
         for i in range(len(langs)):
             self.lang_box.addItem(QIcon('settings/lang/'+langs[i][1]+'.png'),langs[i][0], i)
         self.lang_box.setCurrentIndex(lang)
-        self.lang_box.activated.connect(parent.set_lang)        
+        self.lang_box.activated.connect(parent.set_lang)
+        
+        self.font_size = QSpinBox()
+        self.font_size.setValue(self.parent.font().pointSize())
+        self.font_size.setRange(2,36)
+        self.font_size.valueChanged.connect(self.set_font)
+        
+        #----------------Piano-----------------------------
+        self.oct_size_ = QLabel(self.lp['oct_size'] + ":", self)
+        self.oct_size = QSpinBox()
+        self.oct_size.setValue(self.parent.octaves)
+        self.oct_size.setRange(1,10)
+        self.oct_size.valueChanged.connect(self.set_oct_size)
+        
+        self.f_oct_ = QLabel(self.lp['f_oct'] + ":", self)
+        self.f_oct = QSpinBox()
+        self.f_oct.setValue(self.parent.first_oct)
+        self.f_oct.setRange(0,10)
+        self.f_oct.valueChanged.connect(self.set_f_oct) 
+        
+        #--------------Auto connect-------------------------
+        ac = QCheckBox(self.lp['auto_con'], self)
+        if self.parent.auto_con == 1: ac.toggle()
+        ac.stateChanged.connect(self.set_auto_con)
+        
         
         lay = QVBoxLayout(self)
         
@@ -438,7 +444,48 @@ class Options(QDialog):
         hlay1.addWidget(self.lang_)
         hlay1.addWidget(self.lang_box)
         
+        hlay2 = QHBoxLayout()
+        hlay2.addWidget(self.oct_size_)
+        hlay2.addWidget(self.oct_size)
+        
+        hlay3 = QHBoxLayout()
+        hlay3.addWidget(self.f_oct_)  
+        hlay3.addWidget(self.f_oct)        
+        
         lay.addLayout(hlay1)
+        lay.addLayout(hlay2)
+        lay.addLayout(hlay3)
+        lay.addWidget(ac)
+        
+    def set_auto_con(self, state):
+        if state == QtCore.Qt.Checked:
+            self.parent.auto_con = 1
+        else:
+            self.parent.auto_con = 0    
+        opt_file = open(opt, 'w')
+        opt_file.write(str(self.parent.octaves) + " " + str(self.parent.first_oct) + " " + str(self.parent.auto_con))
+        opt_file.close()         
+    
+    def set_oct_size(self):
+        self.parent.octaves = self.oct_size.value()
+        opt_file = open(opt, 'w')
+        opt_file.write(str(self.parent.octaves) + " " + str(self.parent.first_oct) + " " + str(self.parent.auto_con))
+        opt_file.close() 
+        self.parent.update()
+        
+        
+    def set_f_oct(self):
+        self.parent.first_oct = self.f_oct.value() 
+        opt_file = open(opt, 'w')
+        opt_file.write(str(self.parent.octaves) + " " + str(self.parent.first_oct) + " " + str(self.parent.auto_con))
+        opt_file.close()          
+        
+    def set_font(self):
+        font = self.parent.font()
+        font.setPointSize(self.font_size.value())
+        self.parent.setFont(font)
+    
+        
 
 
 if __name__ == '__main__':
