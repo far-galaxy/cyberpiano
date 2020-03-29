@@ -1,1 +1,4 @@
+C:/Users/Admin/Documents/Code/cyberpiano/soundfonts/NEVER_LET_ME.SF2
+C:/Users/Admin/Documents/Code/cyberpiano/soundfonts/STRANGELOVE.SF2
 C:/Users/Admin/Documents/Code/cyberpiano/soundfonts/GeneralUser GS SoftSynth.sf2
+C:/Users/Admin/Documents/Code/cyberpiano/soundfonts/worldeye.sf2
