@@ -1,7 +1,9 @@
 # CyberPiano 
 - Простая Arduino Midi Клавиатура
 - Работа в качестве Midi клавиатуры
-- Работа в качестве синтезатора при помощи FluidSynth
+- Работа в качестве электронного пианино при помощи FluidSynth
+
+**Инструкция по сборке и запуску пианино: https://github.com/far-galaxy/cyberpiano/wiki**
 
 ## Файлы:
 - cyberpiano.pyw - основная программа
@@ -12,7 +14,6 @@
 - /settings - файлы настроек
 - /Arduino - скетч для Arduino
 
-**Инструкция по сборке и запуску пианино: https://github.com/far-galaxy/cyberpiano/wiki**
 
 ## Туду:
 - [ ] Добавить возможность аккомпанинирования при помощи Midi файлов
